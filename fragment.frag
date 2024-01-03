@@ -24,23 +24,26 @@ void main(){
   float angle=(PI*atan(uv.y-mouse.y,uv.x-mouse.x))/(PI*2.);
   
   gl_FragColor=vec4(bright,factor*mod(angle+offset*.1,1./factor),0.,1.);
-  // gl_FragColor = vec4(bright, 0.0, 0.0, 1.0);
-  
-  // legacy code
-  // vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-  // vec2 mouse = u_mouse.xy / u_resolution.xy;
-  
-  // float offset = abs(10.0 * sin(u_frames / 10000.0));
-  
-  // float factor = 16.0;
-  // float bright = 1.0 - factor * mod(distance(mouse, uv), 1.0 / factor);
-  
-  // bright += offset;
-  // bright = mod(bright, 1.0);
-  
-  // gl_FragColor = vec4(bright, 0.0, 0.0, 1.0);
-  
-  // legacy code
-  // vec2 mouse = vec2(0.5, 0.5);
-  // gl_FragColor = vec4(uv.y, 0.0, 0.0, 1.0);
 }
+
+/*
+gl_FragColor = vec4(bright, 0.0, 0.0, 1.0);
+
+legacy code
+vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+vec2 mouse = u_mouse.xy / u_resolution.xy;
+
+float offset = abs(10.0 * sin(u_frames / 10000.0));
+
+float factor = 16.0;
+float bright = 1.0 - factor * mod(distance(mouse, uv), 1.0 / factor);
+
+bright += offset;
+bright = mod(bright, 1.0);
+
+gl_FragColor = vec4(bright, 0.0, 0.0, 1.0);
+
+legacy code
+vec2 mouse = vec2(0.5, 0.5);
+gl_FragColor = vec4(uv.y, 0.0, 0.0, 1.0);
+*/
