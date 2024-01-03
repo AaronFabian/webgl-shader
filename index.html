@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<style>
+			body {
+				margin: 0;
+				height: 100vh;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+		</style>
+
+		<script>
+			// define control the input
+			const input = {
+				mouse: {
+					keysPressed: {},
+					keysReleased: {},
+
+					// x and y coordinate based on canvas
+					x: 0,
+					y: 0,
+				},
+				keyboard: {
+					keysPressed: {},
+					isDown: {
+						j: false,
+						k: false,
+					},
+				},
+			};
+
+			var canvas = document.createElement('canvas');
+			document.body.appendChild(canvas);
+
+			canvas.width = 1280;
+			canvas.height = 720;
+
+			console.log(canvas.width, canvas.height);
+
+			var gl = canvas.getContext('webgl');
+
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+
+			var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+			gl.shaderSource(
+				vertexShader,
+				`
+          attribute vec3 aPosition;
+
+          void main() {
+            vec4 pos4 = vec4(aPosition, 1.0);
+            gl_Position = pos4;
+          }`
+			);
+			gl.compileShader(vertexShader);
+
+			var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+			gl.shaderSource(
+				fragmentShader,
+				`
+          precision highp float;
+
+          const float PI = 3.14159265359;
+
+          uniform float canvasWidth;
+          uniform vec2 u_resolution;
+          uniform float u_frames;
+          uniform vec2 u_mouse;
+
+          void main() {
+            vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+            vec2 mouse = u_mouse.xy / u_resolution.xy;
+            
+            float offset = abs(10.0 * sin(u_frames / 5000.0));
+            
+            float factor = 16.0;
+            float bright = 1.0 - factor * mod(distance(mouse, uv), 1.0 / factor);
+            
+            bright += offset;
+            bright = mod(bright, 1.0);
+
+            float angle = (PI * atan(uv.y - mouse.y, uv.x - mouse.x)) / (PI * 2.0);
+
+            gl_FragColor = vec4(bright, factor * mod(angle + offset * 0.1, 1.0 / factor), 0.0, 1.0);
+          }`
+			);
+			gl.compileShader(fragmentShader);
+
+			var program = gl.createProgram();
+			gl.attachShader(program, vertexShader);
+			gl.attachShader(program, fragmentShader);
+			gl.linkProgram(program);
+
+			// prettier-ignore
+			// var vertices = new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]);
+			var vertices = new Float32Array([
+          -1.0, -1.0,
+          1.0, -1,
+          1.0,  1.0,
+          -1,  1
+			]);
+
+			var buffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+			gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+			gl.useProgram(program);
+
+			// boiler plate for position
+			program.position = gl.getAttribLocation(program, 'aPosition');
+			gl.enableVertexAttribArray(program.position);
+			gl.vertexAttribPointer(program.position, 2, gl.FLOAT, false, 0, 0);
+
+			program.u_resolution = gl.getUniformLocation(program, 'u_resolution');
+			gl.uniform2fv(program.u_resolution, [canvas.width, canvas.height]);
+
+			// program.color = gl.getUniformLocation(program, 'color');
+			// gl.uniform4fv(program.color, [48 / 255, 174 / 255, 191 / 255, 1.0]);
+
+			program.canvasWidth = gl.getUniformLocation(program, 'canvasWidth');
+			gl.uniform1f(program.canvasWidth, canvas.width);
+
+			// gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+			gl.drawArrays(gl.TRIANGLE_FAN, 0, vertices.length / 2);
+
+			function animate(time) {
+				const _ = requestAnimationFrame(animate);
+
+				program.u_resolution = gl.getUniformLocation(program, 'u_resolution');
+				gl.uniform2fv(program.u_resolution, [canvas.width, canvas.height]);
+
+				program.u_frames = gl.getUniformLocation(program, 'u_frames');
+				gl.uniform1f(program.u_frames, time);
+
+				program.u_mouse = gl.getUniformLocation(program, 'u_mouse');
+				gl.uniform2fv(program.u_mouse, [input.mouse.x, canvas.height - input.mouse.y]);
+
+				program.canvasWidth = gl.getUniformLocation(program, 'canvasWidth');
+				gl.uniform1f(program.canvasWidth, canvas.width);
+
+				gl.clearColor(0.0, 0.0, 0.0, 1.0);
+				gl.clear(gl.COLOR_BUFFER_BIT);
+
+				gl.drawArrays(gl.TRIANGLE_FAN, 0, vertices.length / 2);
+			}
+
+			requestAnimationFrame(animate);
+
+			canvas.addEventListener('mousemove', e => {
+				// e.target is canvas element
+				const rect = e.target.getBoundingClientRect();
+				const x = e.clientX - rect.x;
+				const y = e.clientY - rect.y;
+
+				input.mouse.x = x;
+				input.mouse.y = y;
+			});
+		</script>
+
+		<!-- <canvas></canvas>
+
+		<script id="fragment-shader" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			  precision mediump float;
+			#endif
+
+			uniform vec2 u_resolution;
+			uniform vec2 u_mouse;
+			uniform float u_time;
+
+			void main() {
+			  vec2 pixel = gl_FragCoord.xy / u_resolution.xy;
+			  gl_FragColor = vec4( pixel.y, 0.0, pixel.x, 1.0 );
+			}
+		</script>
+
+		<script id="vertex-shader" type="x-shader/x-vertex">
+			attribute vec2 a_position;
+
+			void main() {
+			  gl_Position = vec4( a_position, 0.0, 1.0 );
+			}
+		</script>
+
+		<script>
+			var canvas = document.querySelector('canvas');
+			var gl = canvas.getContext('webgl');
+			var width, height;
+			var mouseX = 0;
+			var mouseY = 0;
+			var startTime = new Date().getTime(); // Get start time for animating
+
+			// ----- Uniform ----- //
+
+			function Uniform(name, suffix) {
+				this.name = name;
+				this.suffix = suffix;
+				this.location = gl.getUniformLocation(program, name);
+			}
+
+			Uniform.prototype.set = function (...values) {
+				var method = 'uniform' + this.suffix;
+				var args = [this.location].concat(values);
+				gl[method].apply(gl, args);
+			};
+
+			// ----- Rect ----- //
+
+			function Rect(gl) {
+				var buffer = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+				gl.bufferData(gl.ARRAY_BUFFER, Rect.verts, gl.STATIC_DRAW);
+			}
+
+			Rect.verts = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+
+			Rect.prototype.render = function (gl) {
+				gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+			};
+
+			// ----- init WebGL ----- //
+
+			// create program
+			var program = gl.createProgram();
+			// add shaders
+			var vertexShaderSource = document.querySelector('#vertex-shader').text;
+			var fragmentShaderSource = document.querySelector('#fragment-shader').text;
+			addShader(vertexShaderSource, gl.VERTEX_SHADER);
+			addShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
+			// link & use program
+			gl.linkProgram(program);
+			gl.useProgram(program);
+
+			// create fragment uniforms
+			var uResolution = new Uniform('u_resolution', '2f');
+			var uMouse = new Uniform('u_mouse', '2f');
+			var uTime = new Uniform('u_time', '1f');
+			// create position attrib
+			var billboard = new Rect(gl);
+			var positionLocation = gl.getAttribLocation(program, 'a_position');
+			gl.enableVertexAttribArray(positionLocation);
+			gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+			resize();
+			animate();
+
+			// ----- addShader ----- //
+
+			function addShader(source, type) {
+				var shader = gl.createShader(type);
+				gl.shaderSource(shader, source);
+				gl.compileShader(shader);
+				var isCompiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+				if (!isCompiled) {
+					throw new Error('Shader compile error: ' + gl.getShaderInfoLog(shader));
+				}
+				gl.attachShader(program, shader);
+			}
+
+			// ----- render ----- //
+
+			function animate() {
+				// update
+				var now = new Date().getTime();
+				var currentTime = (now - startTime) / 1000;
+				uTime.set(currentTime);
+				uMouse.set(mouseX, mouseY);
+				// render
+				billboard.render(gl);
+				// animate next frame
+				requestAnimationFrame(animate);
+			}
+
+			// ----- resize ----- //
+
+			function resize() {
+				width = canvas.width = window.innerWidth;
+				height = canvas.height = window.innerHeight;
+				uResolution.set(width, height);
+				gl.viewport(0, 0, width, height);
+			}
+
+			window.addEventListener('resize', resize);
+
+			// ----- mouse move ----- //
+
+			document.addEventListener('mousemove', function (event) {
+				mouseX = event.pageX;
+				mouseY = height - event.pageY;
+			});
+		</script> -->
+	</body>
+</html>
